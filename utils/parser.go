@@ -7,41 +7,9 @@ import (
 	"strings"
 )
 
-func CreateContents(meta *types.Metadata) (text string, markupText string, markupUrl string, err error) {
+func CreateContents(meta *types.Metadata, authorTag string) (text string, markupText string, markupUrl string, err error) {
 	event, _ := meta.ParseEvent()
 	switch meta.EventName {
-	case "fork":
-		event := event.(*types.ForkEvent)
-
-		// No Activity Types
-
-		text = createForkText(event)
-		markupText = fmt.Sprintf("Total Forks: %d", event.Repo.ForksCount)
-		markupUrl = event.Repo.HTMLURL + "/network/members"
-	case "issue_comment":
-		event := event.(*types.IssueCommentEvent)
-
-		if !Contains([]string{"created", "deleted"}, event.Action) {
-			err = fmt.Errorf("unsupported event type '%s' for %s", event.Action, meta.EventName)
-			return
-		}
-
-		text = createIssueCommentText(event)
-		markupText = "Open Comment"
-		markupUrl = event.Comment.HTMLURL
-	case "issues":
-		event := event.(*types.IssuesEvent)
-
-		if !Contains([]string{
-			"created", "closed", "opened", "reopened", "locked", "unlocked", // More to be added.
-		}, event.Action) {
-			err = fmt.Errorf("unsupported event type '%s' for %s", event.Action, meta.EventName)
-			return
-		}
-
-		text = createIssuesText(event)
-		markupText = "Open Issue"
-		markupUrl = event.Issue.HTMLURL
 	case "pull_request":
 		event := event.(*types.PullRequestEvent)
 
@@ -52,7 +20,7 @@ func CreateContents(meta *types.Metadata) (text string, markupText string, marku
 			return
 		}
 
-		text = createPullRequestText(event)
+		text = createPullRequestText(event, authorTag)
 		markupText = "Open Pull Request"
 		markupUrl = event.PullRequest.HTMLURL
 	case "pull_request_review_comment":
@@ -63,13 +31,13 @@ func CreateContents(meta *types.Metadata) (text string, markupText string, marku
 			return
 		}
 
-		text = createPullRequestReviewCommentText(event)
+		text = createPullRequestReviewCommentText(event, authorTag)
 		markupText = "Open Comment"
 		markupUrl = event.Comment.HTMLURL
 	case "push":
 		event := event.(*types.PushEvent)
 		// No Activity Types
-		text = createPushText(event)
+		text = createPushText(event, authorTag)
 		markupText = "Open Changes"
 		markupUrl = event.Compare
 	case "release":
@@ -79,25 +47,14 @@ func CreateContents(meta *types.Metadata) (text string, markupText string, marku
 			return
 		}
 
-		text = createReleaseText(event)
+		text = createReleaseText(event, authorTag)
 		markupText = "🌐"
 		markupUrl = event.Release.HTMLURL
-	case "watch":
-		event := event.(*types.WatchEvent)
-
-		if !Contains([]string{"started"}, event.Action) {
-			err = fmt.Errorf("unsupported event type '%s' for %s", event.Action, meta.EventName)
-			return
-		}
-
-		text = createStarText(event)
-		markupText = fmt.Sprintf("✨ Total stars: %d", event.Repo.StargazersCount)
-		markupUrl = event.Repo.HTMLURL + "/stargazers"
 	}
 	return text, markupText, markupUrl, nil
 }
 
-func createPushText(event *types.PushEvent) string {
+func createPushText(event *types.PushEvent, authorTag string) string {
 	text := fmt.Sprintf("<b>🔨 %d New commit to</b> <a href='%s'>%s</a>[<code>%s</code>]\n\n",
 		len(event.Commits),
 		event.Repo.HTMLURL,
@@ -115,44 +72,14 @@ func createPushText(event *types.PushEvent) string {
 		)
 	}
 
+	if authorTag != "" {
+		text += fmt.Sprintf("\n\n@%s, fyi", authorTag)
+	}
+
 	return text
 }
 
-func createForkText(event *types.ForkEvent) string {
-	return fmt.Sprintf("🍴 <a href='%s'>%s</a> forked <a href='%s'>%s</a> → <a href='%s'>%s</a>",
-		event.Sender.HTMLURL,
-		event.Sender.Login,
-		event.Repo.HTMLURL,
-		event.Repo.FullName,
-		event.Forkee.HTMLURL,
-		event.Forkee.FullName,
-	)
-}
-
-func createIssueCommentText(event *types.IssueCommentEvent) string {
-	return fmt.Sprintf("🗣 <a href='%s'>%s</a> commented on issue <a href='%s'>%s</a> in <a href='%s'>%s</a>",
-		event.Sender.HTMLURL,
-		event.Sender.Login,
-		event.Issue.HTMLURL,
-		html.EscapeString(event.Issue.Title),
-		event.Repo.HTMLURL,
-		event.Repo.FullName,
-	)
-}
-
-func createIssuesText(event *types.IssuesEvent) string {
-	return fmt.Sprintf("🐛 <a href='%s'>%s</a> %s issue <a href='%s'>%s</a> in <a href='%s'>%s</a>",
-		event.Sender.HTMLURL,
-		event.Sender.Login,
-		event.Action,
-		event.Issue.HTMLURL,
-		html.EscapeString(event.Issue.Title),
-		event.Repo.HTMLURL,
-		event.Repo.FullName,
-	)
-}
-
-func createPullRequestText(event *types.PullRequestEvent) (text string) {
+func createPullRequestText(event *types.PullRequestEvent, authorTag string) (text string) {
 	text = fmt.Sprintf("🔌 <a href='%s'>%s</a> ", event.Sender.HTMLURL, event.Sender.Login)
 	text += event.Action
 	if event.Action == "opened" {
@@ -161,11 +88,16 @@ func createPullRequestText(event *types.PullRequestEvent) (text string) {
 	text += " pull request "
 	text += fmt.Sprintf("<a href='%s'>%s</a>", event.PullRequest.HTMLURL, html.EscapeString(event.PullRequest.Title))
 	text += fmt.Sprintf(" in <a href='%s'>%s</a>", event.Repo.HTMLURL, event.Repo.FullName)
+
+	if authorTag != "" {
+		text += fmt.Sprintf("\n\n@%s, fyi", authorTag)
+	}
+
 	return text
 }
 
-func createPullRequestReviewCommentText(event *types.PullRequestReviewCommentEvent) string {
-	return fmt.Sprintf("🧐 <a href='%s'>%s</a> commented on PR review <a href='%s'>%s</a> in <a href='%s'>%s</a>",
+func createPullRequestReviewCommentText(event *types.PullRequestReviewCommentEvent, authorTag string) string {
+	text := fmt.Sprintf("🧐 <a href='%s'>%s</a> commented on PR review <a href='%s'>%s</a> in <a href='%s'>%s</a>",
 		event.Sender.HTMLURL,
 		event.Sender.Login,
 		event.PullRequest.HTMLURL,
@@ -173,9 +105,15 @@ func createPullRequestReviewCommentText(event *types.PullRequestReviewCommentEve
 		event.Repo.HTMLURL,
 		event.Repo.FullName,
 	)
+
+	if authorTag != "" {
+		text += fmt.Sprintf("\n\n@%s, fyi", authorTag)
+	}
+
+	return text
 }
 
-func createReleaseText(event *types.ReleaseEvent) (text string) {
+func createReleaseText(event *types.ReleaseEvent, authorTag string) (text string) {
 	text = "🎊 A new "
 	if event.Release.Prerelease {
 		text += "pre"
@@ -195,14 +133,9 @@ func createReleaseText(event *types.ReleaseEvent) (text string) {
 		}
 	}
 
-	return
-}
+	if authorTag != "" {
+		text += fmt.Sprintf("\n\n@%s, fyi", authorTag)
+	}
 
-func createStarText(event *types.WatchEvent) string {
-	return fmt.Sprintf("🌟 <a href='%s'>%s</a> starred <a href='%s'>%s</a>",
-		event.Sender.HTMLURL,
-		event.Sender.Login,
-		event.Repo.HTMLURL,
-		event.Repo.FullName,
-	)
+	return
 }
