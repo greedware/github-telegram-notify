@@ -50,8 +50,31 @@ func CreateContents(meta *types.Metadata, authorTag string) (text string, markup
 		text = createReleaseText(event, authorTag)
 		markupText = "🌐"
 		markupUrl = event.Release.HTMLURL
+	case "pull_request_review":
+		event := event.(*types.PullRequestReviewEvent)
+		text = createPullRequestReviewText(event, authorTag)
+		markupText = "Open Review"
+		markupUrl = event.Review.HTMLURL
 	}
 	return text, markupText, markupUrl, nil
+}
+
+func createPullRequestReviewText(event *types.PullRequestReviewEvent, authorTag string) string {
+	text := fmt.Sprintf("🧐 <a href='%s'>%s</a> %s <a href='%s'>%s</a> in <a href='%s'>%s</a>",
+		event.Sender.HTMLURL,
+		event.Sender.Login,
+		event.Review.State,
+		event.PullRequest.HTMLURL,
+		html.EscapeString(event.PullRequest.Title),
+		event.Repo.HTMLURL,
+		event.Repo.FullName,
+	)
+
+	if authorTag != "" {
+		text += fmt.Sprintf("\n\n@%s, fyi", authorTag)
+	}
+
+	return text
 }
 
 func createPushText(event *types.PushEvent, authorTag string) string {

@@ -17,6 +17,14 @@ type PullRequestEvent struct {
 	Sender      User         `json:"sender,omitempty"`
 }
 
+type PullRequestReviewEvent struct {
+	Action      string       `json:"action,omitempty"`
+	PullRequest *PullRequest `json:"pull_request,omitempty"`
+	Repo        Repository   `json:"repository,omitempty"`
+	Review      Review       `json:"review,omitempty"`
+	Sender      User         `json:"sender,omitempty"`
+}
+
 type PullRequestReviewCommentEvent struct {
 	Action      string              `json:"action,omitempty"`
 	PullRequest *PullRequest        `json:"pull_request,omitempty"`

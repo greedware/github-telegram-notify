@@ -23,6 +23,8 @@ func (e *Metadata) ParseEvent() (event_type interface{}, err error) {
 		event_type = &IssuesEvent{}
 	case "pull_request":
 		event_type = &PullRequestEvent{}
+	case "pull_request_review":
+		event_type = &PullRequestReviewEvent{}
 	case "pull_request_review_comment":
 		event_type = &PullRequestReviewCommentEvent{}
 	case "push":
