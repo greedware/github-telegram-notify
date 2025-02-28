@@ -1,6 +1,6 @@
 name: 'Github Telegram Notifier'
-description: 'Sends commit updates to any chat in Telegram'
-author: 'wrench'
+description: 'Sends git updates to any chat in Telegram'
+author: 'corel-frim'
 inputs:
   bot_token:
     description: >
@@ -11,11 +11,14 @@ inputs:
     description: 'The ID of the chat where you want the bot to send the message'
     required: true
   topic_id:
-    description: The ID of the topic where you want to receive the notifications.
+    description: 'The ID of the topic where you want to receive the notifications.'
     required: false
   git_event:
-    description: The GitHub context json used to fetch repository info.
+    description: 'The GitHub context json used to fetch repository info.'
     default: ${{ toJSON(github) }}
+    required: false
+  author_tag:
+    description: 'The tag to use for tag in telegram like '@{author_tag}'.'
     required: false
 runs:
   using: 'docker'
