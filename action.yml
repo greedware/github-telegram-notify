@@ -18,7 +18,7 @@ inputs:
     default: ${{ toJSON(github) }}
     required: false
   author_tag:
-    description: 'The tag to use for tag in telegram like '@{author_tag}'.'
+    description: 'The tag to use for tag in telegram. DO NOT USE @'
     required: false
 runs:
   using: 'docker'

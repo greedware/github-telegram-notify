@@ -4,7 +4,7 @@ COPY . .
 RUN go build -o /src/app -ldflags="-w -s" .
 FROM gcr.io/distroless/base
 
-LABEL version="1.1.3"
+LABEL version="1.1.4"
 LABEL maintainer="corel-frim"
 LABEL repository="https://github.com/greedware/github-telegram-notify"
 LABEL homepage="https://github.com/greedware/github-telegram-notify"
